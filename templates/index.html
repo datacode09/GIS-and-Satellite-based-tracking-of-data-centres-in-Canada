@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canadian Data Centre GIS Tracker</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Leaflet.heat -->
+  <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <h1 class="header-title">Canadian Data Centre Tracker</h1>
+    </div>
+    <div class="header-right">
+      <div class="header-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search data centres..." />
+      </div>
+      <button id="stats-btn" class="btn btn-secondary" title="Show statistics">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        Stats
+      </button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Sidebar Filter Panel -->
+    <aside class="sidebar" id="filter-sidebar">
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Province</h3>
+        <div id="province-filters" class="filter-group"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Size Category</h3>
+        <div class="filter-group">
+          <label class="filter-label">
+            <input type="checkbox" class="size-filter" value="hyperscale" checked />
+            <span class="dot dot-hyperscale"></span> Hyperscale
+          </label>
+          <label class="filter-label">
+            <input type="checkbox" class="size-filter" value="enterprise" checked />
+            <span class="dot dot-enterprise"></span> Enterprise
+          </label>
+          <label class="filter-label">
+            <input type="checkbox" class="size-filter" value="colocation" checked />
+            <span class="dot dot-colocation"></span> Colocation
+          </label>
+          <label class="filter-label">
+            <input type="checkbox" class="size-filter" value="edge" checked />
+            <span class="dot dot-edge"></span> Edge
+          </label>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Operator</h3>
+        <select id="operator-filter" class="filter-select">
+          <option value="">All operators</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-heading">Year Established</h3>
+        <div class="year-range">
+          <div class="year-inputs">
+            <input type="number" id="year-min" class="year-input" value="1990" min="1980" max="2030" />
+            <span class="year-sep">—</span>
+            <input type="number" id="year-max" class="year-input" value="2030" min="1980" max="2030" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
+        <button id="reset-filters" class="btn btn-ghost">Reset</button>
+      </div>
+    </aside>
+
+    <!-- Map -->
+    <main class="map-container">
+      <div id="map"></div>
+    </main>
+
+    <!-- Detail Panel (slide-in from right) -->
+    <aside class="detail-panel" id="detail-panel">
+      <button class="detail-close" id="detail-close" title="Close">&times;</button>
+      <div id="detail-content"></div>
+    </aside>
+
+    <!-- Stats Panel (slide-in from right, over detail) -->
+    <aside class="stats-panel" id="stats-panel">
+      <button class="detail-close" id="stats-close" title="Close">&times;</button>
+      <h2 class="stats-title">Statistics</h2>
+      <div id="stats-content">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total">—</span>
+          <span class="stat-label">Total Data Centres</span>
+        </div>
+        <div class="chart-section">
+          <h4>By Province</h4>
+          <canvas id="chart-province" height="220"></canvas>
+        </div>
+        <div class="chart-section">
+          <h4>By Size Category</h4>
+          <canvas id="chart-size" height="180"></canvas>
+        </div>
+        <div class="chart-section">
+          <h4>By Decade</h4>
+          <canvas id="chart-decade" height="160"></canvas>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Status bar -->
+  <footer class="status-bar">
+    <span id="status-text">Loading data centres...</span>
+    <span class="status-hint">Click a marker for details &bull; Use layer control to toggle satellite view</span>
+  </footer>
+
+  <script src="/static/js/map.js"></script>
+  <script src="/static/js/markers.js"></script>
+  <script src="/static/js/filters.js"></script>
+  <script src="/static/js/sidebar.js"></script>
+  <script src="/static/js/charts.js"></script>
+</body>
+</html>
